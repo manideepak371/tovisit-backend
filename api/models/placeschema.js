@@ -1,6 +1,6 @@
 const { MongoGridFSChunkError } = require('mongodb')
 var mongoose=require('mongoose')
-mongoose.connect("mongodb://localhost:27017/places")
+
 
 const PlaceSchema=new mongoose.Schema({
     placename:{type:String,required:true,unique:true},
@@ -15,7 +15,7 @@ const PlaceSchema=new mongoose.Schema({
     ]
 })
 
-const PlaceModel=new mongoose.model('PlaceModel',PlaceSchema)
+const PlaceModel=new mongoose.model('PlaceModel',PlaceSchema,'placemodels')
 
 
 module.exports=PlaceModel
