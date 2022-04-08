@@ -2,8 +2,6 @@ var mongoose=require("mongoose")
 const crypt=require('bcrypt')
 const jwt=require('jsonwebtoken')
 
-const APP_PRIVATE_KEY="something@1234something"
-
 const UserSchema=new mongoose.Schema({
     email:{type:String,required:true,unique:true},
     password:{type:String,required:true},
