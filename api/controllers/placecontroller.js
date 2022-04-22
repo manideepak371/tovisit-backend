@@ -1,9 +1,22 @@
-const PlaceModel=require('../models/placeschema')
-const AreasModel=require('../models/areaschema')
+require('dotenv').config()
+const {PlaceModel,ImageModel}=require('../models/placeschema')
+const multer = require('multer')
+const multers3=require('multer-s3')
+const S3=require('aws-sdk/clients/s3')
+const { Mongoose } = require('mongoose')
+const { ObjectId } = require('mongodb')
+const formidable=require('formidable')
+
+const s3=new S3({
+    accessKeyId:process.env.AWS_BUCKET_ACCESS_KEY,
+    secretAccessKey:process.env.AWS_BUCKET_SECRET_KEY
+})
+//retrieve data
 
 exports.default=async (req,res,next)=>{
     try{
-        const dbresponse=await PlaceModel.find({},{placename:1})
+        const dbresponse=await PlaceModel.find({isPlace:true},{placename:1,images:1})
+        console.log(dbresponse)
         if(dbresponse.length > 0){
             res.status(200).json({data:dbresponse,success:true,message:"data retrieved"})
         }
@@ -16,35 +29,6 @@ exports.default=async (req,res,next)=>{
     }
 }
 
-exports.addPlace=async (req,res,next)=>{
-    try{
-        const {placename,startmonth,endmonth,season,city,areas}=req.body
-        if(!placename || !startmonth || !endmonth || !season){
-            res.status(406).end("Please provide required details")
-        }
-        const place_exist=await PlaceModel.findOne({placename:placename})
-        if(!place_exist){
-            const newplace=new PlaceModel({placename,startmonth,endmonth,season,city})
-            const dbresponse=await newplace.save()
-            console.log(dbresponse)
-            if(areas?.length > 0){
-                const newArea=new AreasModel({areas,placename})
-                const addArea=await newArea.save()
-            }
-            res.status(200).end("place added successfully")    
-        }
-        if(place_exist){
-            res.status(409).end("place already exists")
-        }
-    }
-    catch(e){
-        console.log(e)
-    }
-    finally{
-        next()
-    }
-}
-
 exports.getPlace=async (req,res,next)=>{
     try{
         var id=req.body.placename
@@ -52,10 +36,7 @@ exports.getPlace=async (req,res,next)=>{
         if(dbresponse.length > 0 && dbresponse.length == 1){
             res.status(200).end(JSON.stringify(dbresponse))
         }
-        else
-        {
-            res.status(200).end("no data found on this id")
-        }
+        else{res.status(200).end("no data found on this id")}
         next()
     }
     catch(e){
@@ -65,20 +46,210 @@ exports.getPlace=async (req,res,next)=>{
 }
 
 exports.getPlaces=async (req,res,next)=>{
-    const places=await PlaceModel.find({},{placename:1,_id:0})
-    places.length > 0 ? res.status(200).json(places) : res.status(200).json({success:false})
-    next()
-}
-
-exports.getImages=async (req,res,next)=>{
-    const places=await PlaceModel.find({},{placename:1})
+    const places=await PlaceModel.find({},{placename:1,isArea:1,isPlace:1,_id:0})
     places.length > 0 ? res.status(200).json(places) : res.status(200).json({success:false})
     next()
 }
 
 exports.getDetails=async (req,res,next)=>{
-    const placename = req.body.place
-    const places=await PlaceModel.find({placename:placename},{_id:0,__v:0})
+    const placename = req.body.placename
+    const places=await PlaceModel.find({placename:placename},{_id:0,__v:0}).populate('images')
     places.length > 0 && places.length == 1 ? res.status(200).json(places) : res.status(200).json({success:false})
-    next()
+}
+
+//add, update data
+
+
+exports.defaultImage=async (req,res,next)=>{
+    const file=req.file
+    const newImage=new ImageModel({placename:"default image",imagelink:file.location})
+    await newImage.save()
+    res.status(200).end("Uploaded")
+    console.log("default image uploaded to bucket and link uploaded to db")
+}
+
+async function AddPlace(req,res){
+    var form=new formidable.IncomingForm()
+    try{
+        return new Promise((resolve,reject)=>{
+            form.parse(req,async (err,fields,files)=>{
+                const {placename,startmonth,endmonth,season,isPlace,isArea,parentplace}=fields
+                if(!placename || !startmonth || !endmonth || isArea == undefined || isPlace == undefined){
+                    console.log(placename,startmonth,endmonth,season,isArea,isPlace)
+                    reject({success:false,message:"Please provide required details"})
+                }
+                if(isArea == true && !parentplace){
+                    reject({success:false,message:"Please enter parent place for this area"})
+                }
+                const place_exist=await PlaceModel.findOne({placename:placename})
+                if(!place_exist){
+                    const newplace= isArea ? 
+                        new PlaceModel({placename,startmonth,endmonth,season,isPlace,isArea,parentplace})   :
+                        new PlaceModel({placename,startmonth,endmonth,season,isPlace,isArea})
+                    if(parentplace){
+                        const parent=await PlaceModel.findOne({placename:parentplace})
+                        if(parent){
+                            if(!parent.areas){
+                                parent.areas=[]
+                            }
+                            parent.areas.push(placename)
+                            await parent.save()
+                        }
+                        if(!parent){
+                            reject({success:false,message:"Parent place doesn't exist in database."})
+                        }
+                    }
+                    const dbresponse=await newplace.save()
+                    if(dbresponse){
+                        resolve({success:true})
+                    }    
+                    else{
+                        reject({success:false,message:"Failed, not added to database"})
+                    }
+                }
+                if(place_exist){
+                    reject({success:false,message:"place already exists"})
+                }
+            })
+        })
+    }
+    catch(err){
+        console.log(err)
+    }
+}
+
+exports.addPlace=async (req,res,next)=>{
+    try{
+        const response=await AddPlace(req,res,next).then((result)=>{return result}).catch(err => {return err})
+        console.log(response)
+        res.json(response)
+        return
+    }
+    catch(e){
+        console.log(e)
+    }
+    finally{
+        console.log("add place to db task completed")
+    }
+}
+
+exports.uploadImages=multer({
+    storage:multers3({
+        s3:s3,
+        bucket:process.env.AWS_IMAGE_BUCKET,
+        metadata:function(req,file,cb){
+            cb(null,{fieldname:file.fieldname})
+        },
+        key:function(req,file,cb){
+            cb(null,file.originalname + Date.now().toString())
+        }
+    })
+})
+
+exports.updatePlace= async (req,res,next)=>{
+    var form=new formidable.IncomingForm()
+    form.parse(req,async (err,fields,files)=>{
+        const {placename,startmonth,endmonth,season,imagekey}=fields
+        const updatedplace=await PlaceModel.findOne({placename:placename})
+        if(startmonth){
+            updatedplace.startmonth=startmonth
+        }
+        if(endmonth){
+            updatedplace.endmonth=endmonth
+        }
+        if(season){
+            updatedplace.season=season
+        }
+        if(imagekey){
+            const OLD_IMAGE_LINK=updatedplace.images[0].imagelink
+            const OLD_IMAGE_KEY=updatedplace.images[0].key
+            var params={
+                bucket:process.env.AWS_IMAGE_BUCKET,
+                key:OLD_IMAGE_KEY
+            }
+            const DELETE_RESPONSE=await s3.deleteObject(params)
+        }
+        const dbresponse=await updatedplace.save()
+        if(dbresponse){
+            res.json({success:true})
+        }
+        if(!dbresponse){
+            res.json({success:false,message:"update failed"})
+        }
+    })
+}
+
+
+exports.deletePlace=async (req,res,next)=>{
+    const dbresponse=await PlaceModel.findOne({placename:req.body.placename})
+    if(dbresponse){
+        if(dbresponse.isArea){
+            //remove area from parentplace
+            //remove image link from image model
+            //remove image from aws bucket
+            //remove document from place model 
+        }
+        if(dbresponse.isPlace){
+            //get areas related to this pace
+            //for each area -  remove image link from image model, remove area from parent place, remove image from bucket,remove document from place model
+            //remove image link from image model
+            //remove image from bucket
+            //remove document from place
+        }
+    }
+    res.json({success:false})
+}
+
+exports.addImagetoDB=async (req,res,next)=>{
+    const file=req.file
+    if(file){
+        const newplace=await PlaceModel.findOne({placename:req.body.placename})
+        const new_image=new ImageModel({placename:newplace.placename,imagelink:file.location,key:file.key})
+        await new_image.save()
+        console.log("imaglink added to db")
+        newplace.images.push(new_image)
+        console.log("image added to place")
+        const dbresponse=await newplace.save()
+        if(dbresponse){
+            res.json({success:true,messgae:"place added successfully"})
+        }
+        if(!dbresponse){
+            res.json({success:false,messgae:"place added but image link not added to database"})
+        }
+    }
+}
+
+exports.updatedImagetoDB=async (req,res,next)=>{
+    const file=req.file
+    const imagekey=req.body.imagekey
+    const placename=req.body.placename
+    if(file){
+        const updatedImage=await ImageModel({placename:placename,imagelink:file.location,key:file.key})
+        updatedImage.imagelink=file.location
+        updatedImage.key=file.key
+        const dbresponse=await await updatedImage.save()
+        if(dbresponse){
+            res.json({success:true,message:"updated successfully"})
+        }
+        if(!dbresponse){
+            res.json({success:true,message:"image link not added to db"})
+        }
+    }
+}
+
+exports.testMiddlewareFormData1=(req,res,next)=>{
+    console.log("in middleware 2")
+    var form=new formidable.IncomingForm()
+    form.parse(req,function(err,fields,files){
+        console.log(fields)
+    })
+
+}
+
+exports.testMiddlewareFormData2=(req,res,next)=>{
+    var form=new formidable.IncomingForm()
+    form.parse(req,function(err,fields,files){
+        console.log(fields)
+        console.log(files)
+    })
 }

@@ -2,10 +2,10 @@ var express=require('express')
 var app=express()
 var cors=require('cors')
 var cookieParser=require('cookie-parser')
+var bodyParser=require('body-parser')
 require('dotenv').config
 var PlaceRouter=require('./api/routes/placerouter')
-var UserRouter=require('./api/routes/userrouter')
-var ImageRouter=require('./api/routes/imagerouter')
+var AuthorRouter=require('./api/routes/AuthorRouter')
 const mongoose=require('mongoose')
 const connectionString="mongodb://localhost:27017/places"
 mongoose.connect(connectionString)
@@ -13,6 +13,8 @@ mongoose.connect(connectionString)
 
 app.use(express.urlencoded({extended:true}))
 app.use(express.json())
+app.use(bodyParser.urlencoded({extended:true}))
+app.use(bodyParser.json())
 app.use(cookieParser())
 app.use(cors({
     origin:"http://localhost:3000",
@@ -20,7 +22,6 @@ app.use(cors({
 }))
 
 app.use('/',PlaceRouter)
-app.use('/admin',UserRouter)
-app.use('/image',ImageRouter)
+app.use('/author',AuthorRouter)
 
 module.exports=app
