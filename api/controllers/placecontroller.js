@@ -147,36 +147,52 @@ exports.uploadImages=multer({
 })
 
 exports.updatePlace= async (req,res,next)=>{
+    var details={}
+    if(Object.keys(req.body).length > 0){
+        details=req.body
+    }
     var form=new formidable.IncomingForm()
-    form.parse(req,async (err,fields,files)=>{
-        const {placename,startmonth,endmonth,season,imagekey}=fields
-        const updatedplace=await PlaceModel.findOne({placename:placename})
-        if(startmonth){
-            updatedplace.startmonth=startmonth
-        }
-        if(endmonth){
-            updatedplace.endmonth=endmonth
-        }
-        if(season){
-            updatedplace.season=season
-        }
-        if(imagekey){
-            const OLD_IMAGE_LINK=updatedplace.images[0].imagelink
-            const OLD_IMAGE_KEY=updatedplace.images[0].key
-            var params={
-                bucket:process.env.AWS_IMAGE_BUCKET,
-                key:OLD_IMAGE_KEY
-            }
-            const DELETE_RESPONSE=await s3.deleteObject(params)
-        }
-        const dbresponse=await updatedplace.save()
-        if(dbresponse){
-            res.json({success:true})
-        }
-        if(!dbresponse){
-            res.json({success:false,message:"update failed"})
-        }
+    form.parse(req,(err,fields,files)=>{
+        details=fields
     })
+    const {placename,startmonth,endmonth,season,imagekey}=details
+    const updatedplace=await PlaceModel.findOne({placename:placename})
+    if(startmonth){
+        updatedplace.startmonth=startmonth
+    }
+    if(endmonth){
+        updatedplace.endmonth=endmonth
+    }
+    if(season){
+        updatedplace.season=season
+    }
+    if(imagekey){
+        const OLD_IMAGE_LINK=updatedplace.images[0].imagelink
+        const OLD_IMAGE_KEY=updatedplace.images[0].key
+        var params={
+            bucket:process.env.AWS_IMAGE_BUCKET,
+            key:OLD_IMAGE_KEY
+        }
+        const DELETE_RESPONSE=await s3.deleteObject(params)
+        console.log("deleted image form bucket")
+    }
+    const dbresponse=await updatedplace.save()
+    console.log(dbresponse)
+    const file=req.file
+    if(file){
+        const updatedImage=await ImageModel.findOne({placename:placename,key:imagekey})
+        updatedImage.imagelink=file.location
+        updatedImage.key=file.key
+        const dbimageresponse=await updatedImage.save()
+        console.log("updated image link and key in image model")
+    }
+    if(dbresponse){
+        res.json({success:true,message:"updated successfully"})
+        console.log("updated")
+    }
+    if(!dbresponse){
+        res.json({success:true,message:"image link not added to db"})
+    }
 }
 
 
@@ -220,21 +236,21 @@ exports.addImagetoDB=async (req,res,next)=>{
 }
 
 exports.updatedImagetoDB=async (req,res,next)=>{
-    const file=req.file
-    const imagekey=req.body.imagekey
-    const placename=req.body.placename
-    if(file){
-        const updatedImage=await ImageModel({placename:placename,imagelink:file.location,key:file.key})
-        updatedImage.imagelink=file.location
-        updatedImage.key=file.key
-        const dbresponse=await await updatedImage.save()
-        if(dbresponse){
-            res.json({success:true,message:"updated successfully"})
-        }
-        if(!dbresponse){
-            res.json({success:true,message:"image link not added to db"})
-        }
-    }
+    // const file=req.file
+    // const imagekey=req.body.imagekey
+    // const placename=req.body.placename
+    // if(file){
+    //     const updatedImage=await ImageModel({placename:placename,imagelink:file.location,key:file.key})
+    //     updatedImage.imagelink=file.location
+    //     updatedImage.key=file.key
+    //     const dbresponse=await await updatedImage.save()
+    //     if(dbresponse){
+    //         res.json({success:true,message:"updated successfully"})
+    //     }
+    //     if(!dbresponse){
+    //         res.json({success:true,message:"image link not added to db"})
+    //     }
+    // }
 }
 
 exports.testMiddlewareFormData1=(req,res,next)=>{

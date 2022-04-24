@@ -18,7 +18,7 @@ Router.post('/admin/addPlace',PlaceController.addPlace)
 Router.post('/admin/uploadImage',PlaceController.uploadImages.single('images'),PlaceController.addImagetoDB)
 Router.get('/admin/getplaces',PlaceController.getPlaces)
 Router.post('/admin/getdetails',PlaceController.getDetails)
-Router.post('/admin/updatePlace',PlaceController.updatePlace)
+Router.post('/admin/updatePlace',PlaceController.uploadImages.single('images'),PlaceController.updatePlace)
 Router.post('/admin/uploadUpdatedImage',PlaceController.uploadImages.single('images'),PlaceController.updatedImagetoDB)
 Router.post('/admin/deletePlace',PlaceController.deletePlace)
 
