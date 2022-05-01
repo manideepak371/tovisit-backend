@@ -174,7 +174,7 @@ exports.updatePlace= async (req,res,next)=>{
             key:OLD_IMAGE_KEY
         }
         const DELETE_RESPONSE=await s3.deleteObject(params)
-        console.log("deleted image form bucket")
+        console.log("delete image from bucket")
     }
     const dbresponse=await updatedplace.save()
     console.log(dbresponse)
@@ -197,23 +197,50 @@ exports.updatePlace= async (req,res,next)=>{
 
 
 exports.deletePlace=async (req,res,next)=>{
+    //get place from place model
     const dbresponse=await PlaceModel.findOne({placename:req.body.placename})
     if(dbresponse){
-        if(dbresponse.isArea){
+        if(dbresponse?.isArea){
             //remove area from parentplace
+            const parentplace=await PlaceModel.findOne({placename:dbresponse.parentplace})
+            const index=parentplace.ares.indexOf(dbresponse.placename.toString())
+            parentplace.areas.splice(index,1)
+            await parentplace.save()
+
             //remove image link from image model
+            await ImageModel.deleteOne({placename:dbresponse.placename})
+
             //remove image from aws bucket
-            //remove document from place model 
+
+            //remove document from place model
+            await PlaceModel.deleteOne({placename:dbresponse.placename}) 
+
+            res.json({success:true,message:"deleted successfully"})
         }
         if(dbresponse.isPlace){
             //get areas related to this pace
             //for each area -  remove image link from image model, remove area from parent place, remove image from bucket,remove document from place model
-            //remove image link from image model
-            //remove image from bucket
-            //remove document from place
+            if(dbresponse.areas?.length > 0){
+                areas.forEach(area => {
+                    //remove each area from place model
+                    await PlaceModel.deleteOne({placename:area})
+
+                    //remove image link from image model
+                    await ImageModel.deleteOne({placename:area})
+                    
+                    //remove image from bucket
+                });
+
+                //remove document from place
+                await PlaceModel.deleteOne({placename:dbresponse.placename})
+
+                res.json({success:true,message:"deleted successfully"})
+            }
         }
+    } 
+    if(!dbresponse){
+        res.json({success:false,message:"unable to find this place in database"})
     }
-    res.json({success:false})
 }
 
 exports.addImagetoDB=async (req,res,next)=>{
@@ -227,10 +254,10 @@ exports.addImagetoDB=async (req,res,next)=>{
         console.log("image added to place")
         const dbresponse=await newplace.save()
         if(dbresponse){
-            res.json({success:true,messgae:"place added successfully"})
+            res.json({success:true,message:"place added successfully"})
         }
         if(!dbresponse){
-            res.json({success:false,messgae:"place added but image link not added to database"})
+            res.json({success:false,message:"place added but image link not added to database"})
         }
     }
 }
@@ -252,6 +279,7 @@ exports.updatedImagetoDB=async (req,res,next)=>{
     //     }
     // }
 }
+
 
 exports.testMiddlewareFormData1=(req,res,next)=>{
     console.log("in middleware 2")
