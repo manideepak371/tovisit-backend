@@ -258,12 +258,9 @@ exports.deletePlace=async (req,res,next)=>{
     if(!dbresponse){
         res.json({success:false,message:"unable to find this place in database"})
     }
-<<<<<<< HEAD
     else{
         return res.json({success:false})
     }
-=======
->>>>>>> fa236ab17c98c67645f9db1aaa5e75fd6a4f7618
 }
 
 exports.addImagetoDB=async (req,res,next)=>{
