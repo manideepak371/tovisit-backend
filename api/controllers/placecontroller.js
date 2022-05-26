@@ -181,7 +181,7 @@ exports.updatePlace= async (req,res,next)=>{
             key:OLD_IMAGE_KEY
         }
         const DELETE_RESPONSE=await s3.deleteObject(params)
-        console.log("deleted image form bucket")
+        console.log("delete image from bucket")
     }
     const dbresponse=await updatedplace.save()
     console.log(dbresponse)
@@ -254,10 +254,16 @@ exports.deletePlace=async (req,res,next)=>{
                 return res.json({success:false,message:'Unable to delete this place'})
             }
         }
+    } 
+    if(!dbresponse){
+        res.json({success:false,message:"unable to find this place in database"})
     }
+<<<<<<< HEAD
     else{
         return res.json({success:false})
     }
+=======
+>>>>>>> fa236ab17c98c67645f9db1aaa5e75fd6a4f7618
 }
 
 exports.addImagetoDB=async (req,res,next)=>{
@@ -296,6 +302,7 @@ exports.updatedImagetoDB=async (req,res,next)=>{
     //     }
     // }
 }
+
 
 exports.testMiddlewareFormData1=(req,res,next)=>{
     console.log("in middleware 2")

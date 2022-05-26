@@ -22,4 +22,6 @@ Router.post('/admin/updatePlace',PlaceController.uploadImages.single('images'),P
 Router.post('/admin/uploadUpdatedImage',PlaceController.uploadImages.single('images'),PlaceController.updatedImagetoDB)
 Router.post('/admin/deletePlace',PlaceController.deletePlace)
 
+
+
 module.exports=Router
