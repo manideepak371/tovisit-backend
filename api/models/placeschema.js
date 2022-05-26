@@ -23,4 +23,4 @@ const ImageSchema=new mongoose.Schema({
 
 exports.ImageModel=new mongoose.model('ImageModel',ImageSchema,"images")
 
-exports.PlaceModel=new mongoose.model('PlaceModel',PlaceSchema,'placemodels')
+exports.PlaceModel=new mongoose.model('PlaceModel',PlaceSchema,'places')

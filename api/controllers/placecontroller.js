@@ -6,6 +6,7 @@ const S3=require('aws-sdk/clients/s3')
 const { Mongoose } = require('mongoose')
 const { ObjectId } = require('mongodb')
 const formidable=require('formidable')
+const e = require('express')
 
 const s3=new S3({
     accessKeyId:process.env.AWS_BUCKET_ACCESS_KEY,
@@ -149,11 +150,17 @@ exports.uploadImages=multer({
 exports.updatePlace= async (req,res,next)=>{
     var details={}
     if(Object.keys(req.body).length > 0){
-        details=req.body
+        if(req.body){
+            console.log("getting details from req body")
+            details=req.body
+        }
     }
     var form=new formidable.IncomingForm()
     form.parse(req,(err,fields,files)=>{
-        details=fields
+        if(fields){
+            console.log("getting details from form")
+            details=fields
+        }
     })
     const {placename,startmonth,endmonth,season,imagekey}=details
     const updatedplace=await PlaceModel.findOne({placename:placename})
@@ -197,23 +204,60 @@ exports.updatePlace= async (req,res,next)=>{
 
 
 exports.deletePlace=async (req,res,next)=>{
-    const dbresponse=await PlaceModel.findOne({placename:req.body.placename})
+    const dbresponse=await PlaceModel.findOne({placename:req.body.placename}).populate('images')
+    console.log(dbresponse)
     if(dbresponse){
         if(dbresponse.isArea){
+            console.log('deleting area')
             //remove area from parentplace
+            const parentPlace=await PlaceModel.findOne({placename:dbresponse.parentplace})
+            var index=parentPlace.areas.indexOf(dbresponse.placename)
+            parentPlace.areas.splice(index,1)
+            await parentPlace.save()
+            console.log(parentPlace)
             //remove image link from image model
+            await ImageModel.deleteOne({placename:dbresponse.placename})
             //remove image from aws bucket
             //remove document from place model 
+            const response=await PlaceModel.deleteOne({placename:dbresponse.placename})
+            console.log(response)
+            if(response.deletedCount == 1){
+                return res.json({success:true,message:'deleted successfully'})
+            }
+            if(!response){
+                return res.json({success:false,message:'Unable to delete this place'})
+            }
         }
         if(dbresponse.isPlace){
+            console.log('deleting place')
             //get areas related to this pace
             //for each area -  remove image link from image model, remove area from parent place, remove image from bucket,remove document from place model
+            if(dbresponse.areas.length > 0){
+                dbresponse.areas.forEach(async (area) => {
+                    //remove area image from image model
+                    await ImageModel.deleteOne({placename:area})
+                    //remove area from place model
+                    await PlaceModel.deleteOne({placename:area})
+                    //remove image from bucket
+                });
+            }
             //remove image link from image model
+            await ImageModel.deleteOne({placename:dbresponse.placename})
             //remove image from bucket
             //remove document from place
+            const response=await PlaceModel.deleteOne({placename:dbresponse.placename})
+            console.log(response)
+            if(response.deletedCount == 1){
+                return res.json({success:true,message:'deleted successfully'})
+            }
+            if(!response){
+                return res.json({success:false,message:'Unable to delete this place'})
+            }
         }
     }
-    res.json({success:false})
+    else{
+        return res.json({success:false})
+    }
 }
 
 exports.addImagetoDB=async (req,res,next)=>{
@@ -227,10 +271,10 @@ exports.addImagetoDB=async (req,res,next)=>{
         console.log("image added to place")
         const dbresponse=await newplace.save()
         if(dbresponse){
-            res.json({success:true,messgae:"place added successfully"})
+            res.json({success:true,message:"place added successfully"})
         }
         if(!dbresponse){
-            res.json({success:false,messgae:"place added but image link not added to database"})
+            res.json({success:false,message:"place added but image link not added to database"})
         }
     }
 }
