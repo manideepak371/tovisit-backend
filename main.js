@@ -5,7 +5,6 @@ var cookieParser=require('cookie-parser')
 var bodyParser=require('body-parser')
 require('dotenv').config
 var PlaceRouter=require('./api/routes/placerouter')
-var AuthorRouter=require('./api/routes/AuthorRouter')
 const mongoose=require('mongoose')
 const connectionString="mongodb://localhost:27017/places"
 mongoose.connect(connectionString)
@@ -22,6 +21,5 @@ app.use(cors({
 }))
 
 app.use('/',PlaceRouter)
-app.use('/author',AuthorRouter)
 
 module.exports=app

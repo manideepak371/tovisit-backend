@@ -202,67 +202,6 @@ exports.updatePlace= async (req,res,next)=>{
     }
 }
 
-
-exports.deletePlace=async (req,res,next)=>{
-    const dbresponse=await PlaceModel.findOne({placename:req.body.placename}).populate('images')
-    console.log(dbresponse)
-    if(dbresponse){
-        if(dbresponse.isArea){
-            console.log('deleting area')
-            //remove area from parentplace
-            const parentPlace=await PlaceModel.findOne({placename:dbresponse.parentplace})
-            var index=parentPlace.areas.indexOf(dbresponse.placename)
-            parentPlace.areas.splice(index,1)
-            await parentPlace.save()
-            console.log(parentPlace)
-            //remove image link from image model
-            await ImageModel.deleteOne({placename:dbresponse.placename})
-            //remove image from aws bucket
-            //remove document from place model 
-            const response=await PlaceModel.deleteOne({placename:dbresponse.placename})
-            console.log(response)
-            if(response.deletedCount == 1){
-                return res.json({success:true,message:'deleted successfully'})
-            }
-            if(!response){
-                return res.json({success:false,message:'Unable to delete this place'})
-            }
-        }
-        if(dbresponse.isPlace){
-            console.log('deleting place')
-            //get areas related to this pace
-            //for each area -  remove image link from image model, remove area from parent place, remove image from bucket,remove document from place model
-            if(dbresponse.areas.length > 0){
-                dbresponse.areas.forEach(async (area) => {
-                    //remove area image from image model
-                    await ImageModel.deleteOne({placename:area})
-                    //remove area from place model
-                    await PlaceModel.deleteOne({placename:area})
-                    //remove image from bucket
-                });
-            }
-            //remove image link from image model
-            await ImageModel.deleteOne({placename:dbresponse.placename})
-            //remove image from bucket
-            //remove document from place
-            const response=await PlaceModel.deleteOne({placename:dbresponse.placename})
-            console.log(response)
-            if(response.deletedCount == 1){
-                return res.json({success:true,message:'deleted successfully'})
-            }
-            if(!response){
-                return res.json({success:false,message:'Unable to delete this place'})
-            }
-        }
-    } 
-    if(!dbresponse){
-        res.json({success:false,message:"unable to find this place in database"})
-    }
-    else{
-        return res.json({success:false})
-    }
-}
-
 exports.addImagetoDB=async (req,res,next)=>{
     const file=req.file
     if(file){
@@ -282,38 +221,62 @@ exports.addImagetoDB=async (req,res,next)=>{
     }
 }
 
-exports.updatedImagetoDB=async (req,res,next)=>{
-    // const file=req.file
-    // const imagekey=req.body.imagekey
-    // const placename=req.body.placename
-    // if(file){
-    //     const updatedImage=await ImageModel({placename:placename,imagelink:file.location,key:file.key})
-    //     updatedImage.imagelink=file.location
-    //     updatedImage.key=file.key
-    //     const dbresponse=await await updatedImage.save()
-    //     if(dbresponse){
-    //         res.json({success:true,message:"updated successfully"})
-    //     }
-    //     if(!dbresponse){
-    //         res.json({success:true,message:"image link not added to db"})
-    //     }
-    // }
-}
-
-
-exports.testMiddlewareFormData1=(req,res,next)=>{
-    console.log("in middleware 2")
-    var form=new formidable.IncomingForm()
-    form.parse(req,function(err,fields,files){
-        console.log(fields)
-    })
-
-}
-
-exports.testMiddlewareFormData2=(req,res,next)=>{
-    var form=new formidable.IncomingForm()
-    form.parse(req,function(err,fields,files){
-        console.log(fields)
-        console.log(files)
-    })
-}
+// exports.deletePlace=async (req,res,next)=>{
+//     const dbresponse=await PlaceModel.findOne({placename:req.body.placename}).populate('images')
+//     console.log(dbresponse)
+//     if(dbresponse){
+//         if(dbresponse.isArea){
+//             console.log('deleting area')
+//             //remove area from parentplace
+//             const parentPlace=await PlaceModel.findOne({placename:dbresponse.parentplace})
+//             var index=parentPlace.areas.indexOf(dbresponse.placename)
+//             parentPlace.areas.splice(index,1)
+//             await parentPlace.save()
+//             console.log(parentPlace)
+//             //remove image link from image model
+//             await ImageModel.deleteOne({placename:dbresponse.placename})
+//             //remove image from aws bucket
+//             //remove document from place model 
+//             const response=await PlaceModel.deleteOne({placename:dbresponse.placename})
+//             console.log(response)
+//             if(response.deletedCount == 1){
+//                 return res.json({success:true,message:'deleted successfully'})
+//             }
+//             if(!response){
+//                 return res.json({success:false,message:'Unable to delete this place'})
+//             }
+//         }
+//         if(dbresponse.isPlace){
+//             console.log('deleting place')
+//             //get areas related to this pace
+//             //for each area -  remove image link from image model, remove area from parent place, remove image from bucket,remove document from place model
+//             if(dbresponse.areas.length > 0){
+//                 dbresponse.areas.forEach(async (area) => {
+//                     //remove area image from image model
+//                     await ImageModel.deleteOne({placename:area})
+//                     //remove area from place model
+//                     await PlaceModel.deleteOne({placename:area})
+//                     //remove image from bucket
+//                 });
+//             }
+//             //remove image link from image model
+//             await ImageModel.deleteOne({placename:dbresponse.placename})
+//             //remove image from bucket
+//             //remove document from place
+//             const response=await PlaceModel.deleteOne({placename:dbresponse.placename})
+//             console.log(response)
+//             if(response.deletedCount == 1){
+//                 return res.json({success:true,message:'deleted successfully'})
+//             }
+//             if(!response){
+//                 return res.json({success:false,message:'Unable to delete this place'})
+//             }
+//         }
+//     } 
+//     if(!dbresponse){
+//         res.json({success:false,message:"unable to find this place in database"})
+//     }
+//     else{
+//         return res.json({success:false})
+//     }
+// }   
