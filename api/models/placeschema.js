@@ -10,7 +10,7 @@ const PlaceSchema=new mongoose.Schema({
     parentplace:{type:String},
     isPlace:{type:Boolean,required:true},
     isArea:{type:Boolean,required:true},
-    areas:[{type:String}],
+    areas:[{type:mongoose.Schema.Types.ObjectId,ref:"AreaModel"}],
     images:[{type:mongoose.Schema.Types.ObjectId,required:true,ref:"ImageModel"}]
 })
 
@@ -21,6 +21,16 @@ const ImageSchema=new mongoose.Schema({
     key:{type:String,required:true}
 })
 
+const AreaSchema=new mongoose.Schema({
+    placename:{type:String,required:true,unique:true},
+    parentplace:{type:String},
+    isPlace:{type:Boolean,required:true},
+    isArea:{type:Boolean,required:true},
+    images:[{type:mongoose.Schema.Types.ObjectId,required:true,ref:"ImageModel"}]
+})
+
 exports.ImageModel=new mongoose.model('ImageModel',ImageSchema,"images")
+
+exports.AreaModel=new mongoose.model('AreaModel',AreaSchema,'areas')
 
 exports.PlaceModel=new mongoose.model('PlaceModel',PlaceSchema,'places')

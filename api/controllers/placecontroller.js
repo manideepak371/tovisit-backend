@@ -1,5 +1,5 @@
 require('dotenv').config()
-const {PlaceModel,ImageModel}=require('../models/placeschema')
+const {PlaceModel,ImageModel, AreaModel}=require('../models/placeschema')
 const multer = require('multer')
 const multers3=require('multer-s3')
 const S3=require('aws-sdk/clients/s3')
@@ -7,6 +7,7 @@ const { Mongoose } = require('mongoose')
 const { ObjectId } = require('mongodb')
 const formidable=require('formidable')
 const e = require('express')
+const { json } = require('body-parser')
 
 const s3=new S3({
     accessKeyId:process.env.AWS_BUCKET_ACCESS_KEY,
@@ -16,7 +17,7 @@ const s3=new S3({
 
 exports.default=async (req,res,next)=>{
     try{
-        const dbresponse=await PlaceModel.find({isPlace:true},{placename:1,images:1})
+        const dbresponse=await PlaceModel.find({isPlace:true},{_id:0,placename:1,isPlace:1,season:1,startmonth:1,endmonth:1})
         console.log(dbresponse)
         if(dbresponse.length > 0){
             res.status(200).json({data:dbresponse,success:true,message:"data retrieved"})
@@ -54,7 +55,8 @@ exports.getPlaces=async (req,res,next)=>{
 
 exports.getDetails=async (req,res,next)=>{
     const placename = req.body.placename
-    const places=await PlaceModel.find({placename:placename},{_id:0,__v:0}).populate('images')
+    const places=await PlaceModel.find({placename:placename},{_id:0,__v:0}).populate('images').populate('areas')
+    console.log(places)
     places.length > 0 && places.length == 1 ? res.status(200).json(places) : res.status(200).json({success:false})
 }
 
@@ -75,25 +77,32 @@ async function AddPlace(req,res){
         return new Promise((resolve,reject)=>{
             form.parse(req,async (err,fields,files)=>{
                 const {placename,startmonth,endmonth,season,isPlace,isArea,parentplace}=fields
-                if(!placename || !startmonth || !endmonth || isArea == undefined || isPlace == undefined){
-                    console.log(placename,startmonth,endmonth,season,isArea,isPlace)
-                    reject({success:false,message:"Please provide required details"})
+                console.log(placename,startmonth,endmonth,season, typeof isPlace,typeof      isArea,parentplace)  
+                if(isPlace === "true"){
+                    if(!placename || !startmonth || !endmonth || !season){
+                        console.log(placename,startmonth,endmonth,season,isArea,isPlace)
+                        return reject({success:false,message:"Please provide required details"})
+                    }                    
                 }
-                if(isArea == true && !parentplace){
-                    reject({success:false,message:"Please enter parent place for this area"})
+                if(isArea === "true"){
+                    if(!placename){
+                        return reject({success:false,message:"Please provide required details for this area"})
+                    }                    
+                    if(isArea == "true" && !parentplace){
+                        return reject({success:false,message:"Please enter parent place for this area"})
+                    }
                 }
                 const place_exist=await PlaceModel.findOne({placename:placename})
+                console.log(place_exist)
                 if(!place_exist){
-                    const newplace= isArea ? 
-                        new PlaceModel({placename,startmonth,endmonth,season,isPlace,isArea,parentplace})   :
+                    const newplace = (isArea === "true") ? 
+                        new AreaModel({placename,isPlace,isArea,parentplace})   :
                         new PlaceModel({placename,startmonth,endmonth,season,isPlace,isArea})
+                        console.log(newplace)
                     if(parentplace){
                         const parent=await PlaceModel.findOne({placename:parentplace})
                         if(parent){
-                            if(!parent.areas){
-                                parent.areas=[]
-                            }
-                            parent.areas.push(placename)
+                            parent.areas.push(newplace)
                             await parent.save()
                         }
                         if(!parent){
@@ -164,14 +173,16 @@ exports.updatePlace= async (req,res,next)=>{
     })
     const {placename,startmonth,endmonth,season,imagekey}=details
     const updatedplace=await PlaceModel.findOne({placename:placename})
-    if(startmonth){
-        updatedplace.startmonth=startmonth
-    }
-    if(endmonth){
-        updatedplace.endmonth=endmonth
-    }
-    if(season){
-        updatedplace.season=season
+    if(updatedplace.isPlace){
+        if(startmonth){
+            updatedplace.startmonth=startmonth
+        }
+        if(endmonth){
+            updatedplace.endmonth=endmonth
+        }
+        if(season){
+            updatedplace.season=season
+        }
     }
     if(imagekey){
         const OLD_IMAGE_LINK=updatedplace.images[0].imagelink
@@ -205,7 +216,10 @@ exports.updatePlace= async (req,res,next)=>{
 exports.addImagetoDB=async (req,res,next)=>{
     const file=req.file
     if(file){
-        const newplace=await PlaceModel.findOne({placename:req.body.placename})
+        const newplace= (req.body.isArea === 'true') ? 
+            await AreaModel.findOne({placename:req.body.placename})    :
+            await PlaceModel.findOne({placename:req.body.placename}) 
+        console.log(newplace)   
         const new_image=new ImageModel({placename:newplace.placename,imagelink:file.location,key:file.key})
         await new_image.save()
         console.log("imaglink added to db")
