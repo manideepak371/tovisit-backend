@@ -20,6 +20,6 @@ app.use(cors({
     credentials:true
 }))
 
-app.use('/',PlaceRouter)
+app.use('/tovisit',PlaceRouter)
 
 module.exports=app
