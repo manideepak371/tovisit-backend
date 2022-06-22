@@ -48,16 +48,20 @@ exports.getPlace=async (req,res,next)=>{
 }
 
 exports.getPlaces=async (req,res,next)=>{
-    const places=await PlaceModel.find({},{placename:1,isArea:1,isPlace:1,_id:0})
+    const places=await PlaceModel.find({},{placename:1,isArea:1,isPlace:1,_id:0}).populate("areas")
     places.length > 0 ? res.status(200).json(places) : res.status(200).json({success:false})
     next()
 }
 
 exports.getDetails=async (req,res,next)=>{
     const placename = req.body.placename
-    const places=await PlaceModel.find({placename:placename},{_id:0,__v:0}).populate('images').populate('areas')
+    let places=await PlaceModel.find({placename:placename},{_id:0,__v:0}).populate("areas").populate("images")
+    if(places.length == 0){
+        places=await AreaModel.find({placename:placename},{_id:0,__v:0}).populate("images")
+    }
     console.log(places)
     places.length > 0 && places.length == 1 ? res.status(200).json(places) : res.status(200).json({success:false})
+    next()
 }
 
 //add, update data
@@ -151,7 +155,9 @@ exports.uploadImages=multer({
             cb(null,{fieldname:file.fieldname})
         },
         key:function(req,file,cb){
-            cb(null,file.originalname + Date.now().toString())
+            let f=file.originalname.split('.')
+            let fname=f[0]
+            cb(null,fname+"_"+Date.now().toString()+"."+f[1])
         }
     })
 })
@@ -173,6 +179,7 @@ exports.updatePlace= async (req,res,next)=>{
     })
     const {placename,startmonth,endmonth,season,imagekey}=details
     const updatedplace=await PlaceModel.findOne({placename:placename})
+    console.log(updatedplace)
     if(updatedplace.isPlace){
         if(startmonth){
             updatedplace.startmonth=startmonth
