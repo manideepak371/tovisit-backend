@@ -6,7 +6,7 @@ var bodyParser=require('body-parser')
 require('dotenv').config
 var PlaceRouter=require('./api/routes/placerouter')
 const mongoose=require('mongoose')
-const connectionString="mongodb://localhost:27017/places"
+const connectionString=process.env.MONGO_DB_URL+"/tovisit"
 mongoose.connect(connectionString)
 
 
