@@ -6,8 +6,12 @@ var bodyParser=require('body-parser')
 require('dotenv').config
 var PlaceRouter=require('./api/routes/placerouter')
 const mongoose=require('mongoose')
-const connectionString=process.env.MONGO_DB_URL+"/tovisit"
-mongoose.connect(connectionString)
+const MONGO_DB_LOCAL_URL="mongodb://localhost:27017/"
+
+
+mongoose.connect(process.env.MONGO_DB_URL || MONGO_DB_LOCAL_URL,).then(()=>{
+    console.log("connected to mongo db server")
+})
 
 
 app.use(express.urlencoded({extended:true}))
