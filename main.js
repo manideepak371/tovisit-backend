@@ -23,7 +23,10 @@ app.use(cors({
     origin:"http://localhost:3000",
     credentials:true
 }))
-
+app.use('/',(req,res,next)=>{
+    res.status(200).end("welcome tovisit /")
+    return
+})
 app.use('/tovisit',PlaceRouter)
 
 module.exports=app
