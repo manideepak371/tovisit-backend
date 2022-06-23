@@ -10,6 +10,7 @@ const MONGO_DB_LOCAL_URL="mongodb://localhost:27017/"
 
 
 mongoose.connect(process.env.MONGO_DB_URL || MONGO_DB_LOCAL_URL,).then(()=>{
+    console.log(process.env.MONGO_DB_URL)
     console.log("connected to mongo db server")
 })
 
@@ -24,6 +25,9 @@ app.use(cors({
     credentials:true
 }))
 
+app.use('/',(req,res)=>{
+    res.status(200).end("welcome tovisit /")
+})
 app.use('/tovisit',PlaceRouter)
 
 module.exports=app
