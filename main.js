@@ -25,9 +25,9 @@ app.use(cors({
     credentials:true
 }))
 
-app.use('/',(req,res)=>{
-    res.status(200).end("welcome tovisit /")
-})
+// app.use('/',(req,res)=>{
+//     res.status(200).end("welcome tovisit /")
+// })
 app.use('/tovisit',PlaceRouter)
 
 module.exports=app
