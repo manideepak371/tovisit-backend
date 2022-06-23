@@ -16,6 +16,7 @@ const s3=new S3({
 //retrieve data
 
 exports.default=async (req,res,next)=>{
+    console.log(req.url)
     try{
         const dbresponse=await PlaceModel.find({isPlace:true},{_id:0,placename:1,isPlace:1,season:1,startmonth:1,endmonth:1})
         console.log(dbresponse)
