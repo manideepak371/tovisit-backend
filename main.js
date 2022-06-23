@@ -3,7 +3,7 @@ var app=express()
 var cors=require('cors')
 var cookieParser=require('cookie-parser')
 var bodyParser=require('body-parser')
-require('dotenv').config
+require('dotenv',{path:'./env/.env'}).config
 var PlaceRouter=require('./api/routes/placerouter')
 const mongoose=require('mongoose')
 const MONGO_DB_LOCAL_URL="mongodb://localhost:27017/"
