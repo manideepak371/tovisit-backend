@@ -21,7 +21,7 @@ app.use(bodyParser.urlencoded({extended:true}))
 app.use(bodyParser.json())
 app.use(cookieParser())
 app.use(cors({
-    origin:"https://tovisit-india-web.netlify.app"
+    origin:"*"
 }))
 
 // app.use('/',(req,res)=>{
