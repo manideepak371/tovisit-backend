@@ -116,7 +116,7 @@ async function AddPlace(req,res){
                     }
                     const dbresponse=await newplace.save()
                     if(dbresponse){
-                        resolve({success:true})
+                        resolve({success:true,message:"places added successfully"})
                     }    
                     else{
                         reject({success:false,message:"Failed, not added to database"})
